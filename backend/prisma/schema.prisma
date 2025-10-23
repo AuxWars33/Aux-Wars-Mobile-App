@@ -1,0 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  hostedSessions Session[] @relation("HostedSessions")
+  participants   SessionParticipant[]
+  votes          Vote[]
+  songs          Song[]
+
+  @@map("users")
+}
+
+model Session {
+  id            String   @id @default(uuid())
+  name          String
+  code          String   @unique
+  hostId        String
+  maxPlayers    Int      @default(8)
+  roundDuration Int      @default(30) // in seconds
+  status        String   @default("waiting") // waiting, active, completed
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  host         User                 @relation("HostedSessions", fields: [hostId], references: [id], onDelete: Cascade)
+  participants SessionParticipant[]
+  rounds       Round[]
+  votes        Vote[]
+
+  @@map("sessions")
+}
+
+model SessionParticipant {
+  id        String   @id @default(uuid())
+  sessionId String
+  userId    String
+  isHost    Boolean  @default(false)
+  score     Int      @default(0)
+  joinedAt  DateTime @default(now())
+
+  // Relations
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@map("session_participants")
+}
+
+model Round {
+  id          String   @id @default(uuid())
+  sessionId   String
+  roundNumber Int
+  status      String   @default("active") // active, voting, completed
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+
+  // Relations
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  songs   Song[]
+
+  @@unique([sessionId, roundNumber])
+  @@map("rounds")
+}
+
+model Song {
+  id          String   @id @default(uuid())
+  title       String
+  artist      String
+  spotifyId   String?
+  albumArt    String?
+  duration    Int? // in seconds
+  roundId     String?
+  submittedBy String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  round Round? @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  user  User   @relation(fields: [submittedBy], references: [id], onDelete: Cascade)
+  votes Vote[]
+
+  @@map("songs")
+}
+
+model Vote {
+  id        String   @id @default(uuid())
+  sessionId String
+  userId    String
+  songId    String
+  round     Int      @default(1)
+  createdAt DateTime @default(now())
+
+  // Relations
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  song    Song    @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId, round])
+  @@map("votes")
+}
