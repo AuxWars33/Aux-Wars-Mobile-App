@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,11 +6,64 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Rive from 'rive-react-native';
+import { supabase } from '../../lib/supabase';
 
 export default function HomeScreen() {
+  const [testing, setTesting] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connected' | 'error'>('idle');
+
+  const testSupabaseConnection = async () => {
+    setTesting(true);
+    try {
+      // Test connection by querying the competitions table
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .limit(1);
+      
+      if (error) {
+        // Log detailed error information to console
+        console.log('=== SUPABASE ERROR DETAILS ===');
+        console.log('Message:', error.message);
+        console.log('Code:', error.code);
+        console.log('Details:', error.details);
+        console.log('Hint:', error.hint);
+        console.log('Full error object:', JSON.stringify(error, null, 2));
+        console.log('==============================');
+        throw error;
+      }
+      
+      setConnectionStatus('connected');
+      Alert.alert(
+        '✓ Connected!',
+        `Successfully connected to Supabase!\nFound ${data ? data.length : 0} competition(s).`,
+        [{ text: 'OK', onPress: () => setConnectionStatus('idle') }]
+      );
+    } catch (err: any) {
+      setConnectionStatus('error');
+      
+      // Build detailed error message
+      const errorDetails = [
+        `Message: ${err.message || 'Unknown error'}`,
+        err.code ? `Code: ${err.code}` : null,
+        err.details ? `Details: ${err.details}` : null,
+        err.hint ? `Hint: ${err.hint}` : null,
+      ].filter(Boolean).join('\n\n');
+      
+      Alert.alert(
+        '✗ Connection Failed',
+        errorDetails,
+        [{ text: 'OK', onPress: () => setConnectionStatus('idle') }]
+      );
+    } finally {
+      setTesting(false);
+    }
+  };
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -105,6 +158,37 @@ export default function HomeScreen() {
               <Ionicons name="bar-chart" size={40} color="#fff" />
             </View>
             <Text style={styles.featureCardSubtitle}>Track progress</Text>
+          </TouchableOpacity>
+
+          {/* Supabase Test Card */}
+          <TouchableOpacity 
+            style={[
+              styles.featureCard,
+              connectionStatus === 'connected' && styles.featureCardSuccess,
+              connectionStatus === 'error' && styles.featureCardError,
+            ]}
+            onPress={testSupabaseConnection}
+            disabled={testing}
+          >
+            <View style={styles.featureCardContent}>
+              <Text style={styles.featureCardTitle}>Supabase</Text>
+              {connectionStatus === 'connected' && (
+                <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+              )}
+              {connectionStatus === 'error' && (
+                <Ionicons name="alert-circle" size={20} color="#F44336" />
+              )}
+            </View>
+            <View style={[styles.featureCardIcon, { backgroundColor: '#00C853' }]}>
+              {testing ? (
+                <ActivityIndicator size={40} color="#fff" />
+              ) : (
+                <Ionicons name="cloud-done" size={40} color="#fff" />
+              )}
+            </View>
+            <Text style={styles.featureCardSubtitle}>
+              {testing ? 'Testing...' : 'Test connection'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -291,6 +375,14 @@ const styles = StyleSheet.create({
   featureCardSubtitle: {
     fontSize: 13,
     color: '#999',
+  },
+  featureCardSuccess: {
+    borderColor: '#4CAF50',
+    borderWidth: 2,
+  },
+  featureCardError: {
+    borderColor: '#F44336',
+    borderWidth: 2,
   },
 });
 
