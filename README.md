@@ -70,7 +70,33 @@ npm install
 yarn install
 ```
 
-### 3️⃣ Install iOS dependencies (CocoaPods)
+### 3️⃣ Generate native iOS and Android folders (if not present)
+
+> **Note:** The `ios` and `android` folders are not committed to the repository. They need to be generated using Expo's prebuild command.
+
+```bash
+npx expo prebuild
+```
+
+This will generate the native project folders with all necessary configuration files including the `Podfile`.
+
+**If prompted about malformed project:** If you see a message like _"The ios project is malformed, would you like to clear the project files and reinitialize them?"_, answer **Y (yes)** to let Expo clean and regenerate the folders.
+
+**Alternative:** If you only want to generate the iOS folder:
+```bash
+npx expo prebuild --platform ios
+```
+
+**To force clean regeneration:**
+```bash
+npx expo prebuild --clean
+```
+
+### 4️⃣ Copy custom assets to iOS (Required after prebuild)
+
+
+
+### 5️⃣ Install iOS dependencies (CocoaPods)
 
 ```bash
 cd ios
@@ -78,25 +104,85 @@ pod install
 cd ..
 ```
 
-### 4️⃣ Start the Expo development server
+### 6️⃣ Start the Expo development server
 
 ```bash
 npx expo start
 ```
 
-### 5️⃣ Run on iOS Simulator
+### 7️⃣ Run on iOS Simulator
 
 **Option A: From the Expo CLI**
 
 Once the Expo dev server is running, press `i` in the terminal to launch the iOS simulator.
 
-**Option B: Using npm script**
+**Option B: Using npm script (handles prebuild automatically)**
 
 ```bash
 npm run ios
 ```
 
+This command will automatically run prebuild if the ios folder doesn't exist.
 
+### 🔧 Troubleshooting iOS Setup
+
+**Issue: iOS Assets folder disappears after prebuild**
+
+When you run `npx expo prebuild`, it regenerates the entire ios folder from scratch, which removes custom assets like `beanie_loading.riv`. You must copy them back after each prebuild:
+```bash
+mkdir -p ios/Assets
+cp assets/images/beanie_loading.riv ios/Assets/
+```
+
+💡 **Tip:** Create a setup script to automate this (see "Quick Setup Script" below).
+
+**Issue: "No Podfile found in the project directory"**
+
+This means the native ios folder hasn't been generated yet. Run:
+```bash
+npx expo prebuild
+cd ios && pod install && cd ..
+```
+
+**Issue: "The ios project is malformed" when running prebuild**
+
+This is normal! Answer **Y (yes)** when prompted. Expo will clean and regenerate the native folders. Don't forget to copy custom assets afterwards:
+```bash
+npx expo prebuild --clean
+mkdir -p ios/Assets
+cp assets/images/beanie_loading.riv ios/Assets/
+cd ios && pod install && cd ..
+```
+
+**Issue: CocoaPods installation fails**
+```bash
+sudo gem install cocoapods
+cd ios && pod install --repo-update && cd ..
+```
+
+**Issue: iOS Simulator not launching**
+```bash
+# Open Xcode and launch simulator manually
+open -a Simulator
+```
+
+**Issue: Build fails with missing dependencies**
+```bash
+# Clean and reinstall everything
+rm -rf ios android node_modules
+npm install
+npx expo prebuild
+mkdir -p ios/Assets
+cp assets/images/beanie_loading.riv ios/Assets/
+cd ios && pod install && cd ..
+```
+
+**Issue: Metro bundler port conflict**
+```bash
+# Kill process on port 8081
+lsof -ti:8081 | xargs kill -9
+npx expo start --clear
+```
 
 
 
@@ -111,6 +197,32 @@ npm run ios        # Run on iOS simulator
 npm run android    # Run on Android emulator
 npm run web        # Run in web browser
 npx expo start -c  # Start with cleared cache
+```
+
+### 🚀 Quick Setup Script (Recommended)
+
+To make setup easier, especially after running `prebuild`, you can create a helper script:
+
+**Create `setup-ios.sh` in the `aux-wars-RN` folder:**
+```bash
+#!/bin/bash
+echo "🔨 Running expo prebuild..."
+npx expo prebuild --clean
+
+echo "📁 Copying custom assets..."
+mkdir -p ios/Assets
+cp assets/images/beanie_loading.riv ios/Assets/
+
+echo "📦 Installing CocoaPods dependencies..."
+cd ios && pod install && cd ..
+
+echo "✅ iOS setup complete! Run 'npm run ios' to start."
+```
+
+**Make it executable and run it:**
+```bash
+chmod +x setup-ios.sh
+./setup-ios.sh
 ```
 
 ---
