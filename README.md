@@ -82,6 +82,8 @@ cd ..
 
 ```bash
 npx expo start
+OR
+npx expo run:ios (preferred)
 ```
 
 ### 5️⃣ Run on iOS Simulator
