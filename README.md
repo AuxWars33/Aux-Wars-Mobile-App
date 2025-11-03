@@ -54,7 +54,7 @@ Before you begin, ensure you have the following installed:
 - **npm** or **yarn**
 - **Xcode** (for iOS development) - Available from the Mac App Store
 - **CocoaPods** - Install via `sudo gem install cocoapods`
-- **Expo CLI** - Will be installed with project dependencies
+- **Expo CLI** - `npm install -g expo-cli` Will be installed with project dependencies
 
 ### 1️⃣ Navigate to the React Native project
 
