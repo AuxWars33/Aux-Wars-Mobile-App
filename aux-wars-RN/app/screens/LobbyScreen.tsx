@@ -305,8 +305,8 @@ export default function LobbyScreen() {
       <StatusBar barStyle="dark-content" />
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleLeaveSession}>
-          <Ionicons name="close" size={28} color="#2D1B2E" />
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={28} color="#2D1B2E" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Lobby</Text>
         <View style={styles.placeholder} />
