@@ -61,22 +61,6 @@ This guide provides step-by-step instructions to complete the core features of A
    );
    ```
 
-### Phase 5: Lobby/Waiting Room
-**Priority: HIGH** - Players need to see who's joined
-
-1. **Create Lobby Screen** (`/app/screens/LobbyScreen.tsx`)
-   - Show session info (name, artist, code)
-   - List all participants
-   - Show who has submitted their deck
-   - Host can start the game when all decks are submitted
-   - Real-time updates via Supabase subscriptions
-
-2. **Features:**
-   - Copy session code button
-   - Kick players (host only)
-   - Leave session button
-   - Ready/Not Ready indicators
-
 ### Phase 6: Round Playback
 **Priority: HIGH** - Core gameplay mechanic
 
@@ -357,32 +341,8 @@ cd ios && pod install && cd ..
 
 ## 🚀 Next Immediate Steps
 
-1. **Update Supabase Schema** - Add the missing columns and tables
 2. **Create Deck Builder** - This is the most critical missing piece
 3. **Create Lobby Screen** - Players need to see each other
 4. **Test Session Flow** - Create → Join → Build Decks → Start
 
-Once these are done, you'll have a fully functional MVP of the core game loop!
-
----
-
-## 💡 Tips for Success
-
-1. **Test with Real Devices** - Use Expo Go on physical phones for best testing
-2. **Use React DevTools** - Install for debugging: `npm install -g react-devtools`
-3. **Monitor Backend Logs** - Watch for errors in real-time
-4. **Start Simple** - Get basic flow working, then add polish
-5. **Use Supabase Realtime** - For live updates without Socket.IO initially
-
----
-
-## 📞 Need Help?
-
-If you get stuck:
-1. Check the console logs (both app and backend)
-2. Test Supabase queries in the Supabase dashboard
-3. Use `console.log` liberally for debugging
-4. Test API endpoints with Postman or curl
-
-Good luck building Aux Wars! 🎵🏆
 
