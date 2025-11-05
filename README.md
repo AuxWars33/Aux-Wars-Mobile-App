@@ -13,7 +13,7 @@ This repository contains both the **React Native (Expo)** mobile client and a **
 This repository contains multiple projects:
 
 - **`aux-wars-RN/`** - React Native mobile app (Expo) for iOS and Android
-- **`aux-wars/`** - React web app (Vite)
+- **`aux-wars/`** - React web app (ios sim)
 - **`backend/`** - Node.js backend with Socket.IO
 
 ---
@@ -95,6 +95,8 @@ npx expo prebuild --clean
 ```
 
 ### 4️⃣ Copy custom assets to iOS (Required after prebuild)
+**You need this file ``auxwarsRN.xcodeproj`` to open in Xcode so it is best to use the finder file explorer for this as seen below:**
+Once opened you will create a new group called "Assets" in the root directory and then drag the ``beanie_loading.riv`` file into it and check the target box
 
 <img width="1076" height="788" alt="image" src="https://github.com/user-attachments/assets/1451bc65-c473-4612-bba1-34bc25a5ed50" />
 <img width="1076" height="788" alt="image" src="https://github.com/user-attachments/assets/cf05ef2e-0fe0-4674-9aaa-347e88e8fb47" />
@@ -114,6 +116,8 @@ cd ..
 
 ```bash
 npx expo start
+OR
+npx expo run:ios (preferred)
 ```
 
 ### 7️⃣ Run on iOS Simulator
