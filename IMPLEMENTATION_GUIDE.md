@@ -124,8 +124,8 @@ This guide provides step-by-step instructions to complete the core features of A
    - Show match statistics
    - "Play Again" button
 
-### Phase 9: Real-Time Synchronization
-**Priority: HIGH** - Keeps all players in sync
+### Phase 9: Real-Time Synchronization(Strecth Goal)
+**Priority eh ** - Keeps all players in sync
 
 1. **Create Socket Service** (`/lib/socketService.ts`)
    ```typescript
