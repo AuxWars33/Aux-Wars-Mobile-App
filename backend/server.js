@@ -26,9 +26,11 @@ app.get('/health', (req, res) => {
 // Routes
 const authRoutes = require('./routes/auth');
 const sessionRoutes = require('./routes/sessions');
+const spotifyRoutes = require('./routes/spotify');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/sessions', sessionRoutes);
+app.use('/api/spotify', spotifyRoutes);
 
 // Socket.IO connection handling
 require('./socket/handlers')(io, prisma);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -11,59 +11,126 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Rive from 'rive-react-native';
-import { supabase } from '../../lib/supabase';
+import { useRouter } from 'expo-router';
+import { useAuth } from '../../lib/AuthContext';
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const { user, signOut, isSpotifyConnected, connectSpotify, disconnectSpotify } = useAuth();
   const [testing, setTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connected' | 'error'>('idle');
 
-  const testSupabaseConnection = async () => {
-    setTesting(true);
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!user) {
+      router.replace('/auth/login');
+    }
+  }, [user]);
+
+  const handleCreateSession = () => {
+    if (!isSpotifyConnected) {
+      Alert.alert(
+        'Spotify Required',
+        'You need to connect your Spotify account to create a session.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Connect', onPress: handleConnectSpotify },
+        ]
+      );
+      return;
+    }
+    router.push('/session/create');
+  };
+
+  const handleJoinSession = () => {
+    if (!isSpotifyConnected) {
+      Alert.alert(
+        'Spotify Required',
+        'You need to connect your Spotify account to join a session.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Connect', onPress: handleConnectSpotify },
+        ]
+      );
+      return;
+    }
+    router.push('/session/join');
+  };
+
+  const handleConnectSpotify = async () => {
     try {
-      // Test connection by querying the competitions table
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .limit(1);
-      
-      if (error) {
-        // Log detailed error information to console
-        console.log('=== SUPABASE ERROR DETAILS ===');
-        console.log('Message:', error.message);
-        console.log('Code:', error.code);
-        console.log('Details:', error.details);
-        console.log('Hint:', error.hint);
-        console.log('Full error object:', JSON.stringify(error, null, 2));
-        console.log('==============================');
-        throw error;
-      }
-      
-      setConnectionStatus('connected');
-      Alert.alert(
-        '✓ Connected!',
-        `Successfully connected to Supabase!\nFound ${data ? data.length : 0} competition(s).`,
-        [{ text: 'OK', onPress: () => setConnectionStatus('idle') }]
-      );
-    } catch (err: any) {
-      setConnectionStatus('error');
-      
-      // Build detailed error message
-      const errorDetails = [
-        `Message: ${err.message || 'Unknown error'}`,
-        err.code ? `Code: ${err.code}` : null,
-        err.details ? `Details: ${err.details}` : null,
-        err.hint ? `Hint: ${err.hint}` : null,
-      ].filter(Boolean).join('\n\n');
-      
-      Alert.alert(
-        '✗ Connection Failed',
-        errorDetails,
-        [{ text: 'OK', onPress: () => setConnectionStatus('idle') }]
-      );
-    } finally {
-      setTesting(false);
+      await connectSpotify();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to connect to Spotify');
     }
   };
+
+  const handleSignOut = async () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          await signOut();
+          router.replace('/auth/login');
+        },
+      },
+    ]);
+  };
+
+  // Don't render if not authenticated
+  if (!user) {
+    return null;
+  }
+
+//   const testSupabaseConnection = async () => {
+//     setTesting(true);
+//     try {
+//       // Test connection by querying the competitions table
+//       const { data, error } = await supabase
+//         .from('users')
+//         .select('*')
+//         .limit(1);
+      
+//       if (error) {
+//         // Log detailed error information to console
+//         console.log('=== SUPABASE ERROR DETAILS ===');
+//         console.log('Message:', error.message);
+//         console.log('Code:', error.code);
+//         console.log('Details:', error.details);
+//         console.log('Hint:', error.hint);
+//         console.log('Full error object:', JSON.stringify(error, null, 2));
+//         console.log('==============================');
+//         throw error;
+//       }
+      
+//       setConnectionStatus('connected');
+//       Alert.alert(
+//         '✓ Connected!',
+//         `Successfully connected to Supabase!\nFound ${data ? data.length : 0} competition(s).`,
+//         [{ text: 'OK', onPress: () => setConnectionStatus('idle') }]
+//       );
+//     } catch (err: any) {
+//       setConnectionStatus('error');
+      
+//       // Build detailed error message
+//       const errorDetails = [
+//         `Message: ${err.message || 'Unknown error'}`,
+//         err.code ? `Code: ${err.code}` : null,
+//         err.details ? `Details: ${err.details}` : null,
+//         err.hint ? `Hint: ${err.hint}` : null,
+//       ].filter(Boolean).join('\n\n');
+      
+//       Alert.alert(
+//         '✗ Connection Failed',
+//         errorDetails,
+//         [{ text: 'OK', onPress: () => setConnectionStatus('idle') }]
+//       );
+//     } finally {
+//       setTesting(false);
+//     }
+//   };
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -80,7 +147,7 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.headerTitle}>Aux Wars</Text>
           </View>
-          <TouchableOpacity style={styles.profileButton}>
+          <TouchableOpacity style={styles.profileButton} onPress={handleSignOut}>
             <View style={styles.profileIcon}>
               <Ionicons name="person" size={20} color="#FFFBF5" />
             </View>
@@ -99,12 +166,54 @@ export default function HomeScreen() {
           
           <Text style={styles.balanceAmount}>No Active Session</Text>
           
+          {/* Spotify Connection Status */}
+          {!isSpotifyConnected ? (
+            <TouchableOpacity style={styles.spotifyBanner} onPress={handleConnectSpotify}>
+              <Ionicons name="musical-notes" size={20} color="#1DB954" />
+              <Text style={styles.spotifyBannerText}>Connect Spotify to play</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.spotifyConnectedBanner}>
+              <Ionicons name="checkmark-circle" size={20} color="#1DB954" />
+              <Text style={styles.spotifyConnectedText}>Spotify Connected</Text>
+              <TouchableOpacity 
+                style={styles.disconnectButton}
+                onPress={async () => {
+                  Alert.alert(
+                    'Disconnect Spotify',
+                    'Are you sure you want to disconnect your Spotify account?',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Disconnect',
+                        style: 'destructive',
+                        onPress: async () => {
+                          try {
+                            await disconnectSpotify();
+                            Alert.alert('Success', 'Spotify account disconnected');
+                          } catch (error) {
+                            Alert.alert('Error', 'Failed to disconnect Spotify');
+                          }
+                        },
+                      },
+                    ]
+                  );
+                }}
+              >
+                <Text style={styles.disconnectButtonText}>Disconnect</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Action Buttons */}
           <View style={styles.actionButtons}>
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity style={styles.actionButton} onPress={handleCreateSession}>
               <Text style={styles.actionButtonText}>Create Session</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, styles.actionButtonSecondary]}>
+            <TouchableOpacity 
+              style={[styles.actionButton, styles.actionButtonSecondary]} 
+              onPress={handleJoinSession}
+            >
               <Text style={styles.actionButtonText}>Join Session</Text>
             </TouchableOpacity>
           </View>
@@ -160,7 +269,7 @@ export default function HomeScreen() {
             <Text style={styles.featureCardSubtitle}>Track progress</Text>
           </TouchableOpacity>
 
-          {/* Supabase Test Card */}
+          {/* Supabase Test Card
           <TouchableOpacity 
             style={[
               styles.featureCard,
@@ -189,7 +298,7 @@ export default function HomeScreen() {
             <Text style={styles.featureCardSubtitle}>
               {testing ? 'Testing...' : 'Test connection'}
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
         {/* Bottom spacing */}
@@ -289,6 +398,51 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2D1B2E',
     marginBottom: 24,
+  },
+  spotifyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E7F5EC',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  spotifyBannerText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1DB954',
+  },
+  spotifyConnectedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#E7F5EC',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  spotifyConnectedText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1DB954',
+    marginLeft: 8,
+  },
+  disconnectButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#1DB954',
+  },
+  disconnectButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1DB954',
   },
   actionButtons: {
     flexDirection: 'row',
