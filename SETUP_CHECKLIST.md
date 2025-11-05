@@ -21,31 +21,6 @@ Use this checklist to get your development environment ready.
 
 ### 2. Supabase Configuration
 
-- [ ] Update Supabase schema with new fields:
-  ```sql
-  -- Add to sessions table (lowercase for PostgreSQL)
-  ALTER TABLE sessions 
-  ADD COLUMN IF NOT EXISTS artistid TEXT,
-  ADD COLUMN IF NOT EXISTS artistname TEXT,
-  ADD COLUMN IF NOT EXISTS artistimageurl TEXT,
-  ADD COLUMN IF NOT EXISTS decksize INTEGER DEFAULT 5,
-  ADD COLUMN IF NOT EXISTS currentround INTEGER DEFAULT 0;
-  ```
-
-- [ ] Create player_decks table:
-  ```sql
-  CREATE TABLE IF NOT EXISTS player_decks (
-    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    sessionId TEXT REFERENCES sessions(id) ON DELETE CASCADE,
-    userId TEXT REFERENCES users(id) ON DELETE CASCADE,
-    songs JSONB,
-    isSubmitted BOOLEAN DEFAULT false,
-    createdAt TIMESTAMP DEFAULT NOW(),
-    UNIQUE(sessionId, userId)
-  );
-  ```
-
-- [ ] Enable Row Level Security policies (see IMPLEMENTATION_GUIDE.md)
 
 ### 3. Spotify Developer Account
 
@@ -184,6 +159,7 @@ SELECT * FROM session_participants;
 - Create Session screen
 - Join Session screen
 - Backend API routes
+- Lobby screen
 
 ### 🚧 In Progress
 - Deck Builder screen
@@ -193,15 +169,13 @@ SELECT * FROM session_participants;
 - Round Playback screen
 - Voting screen
 - Results screen
-- Socket.IO integration
+- Socket.IO integration(maybe)
 
 ---
 
 ## 🎯 Immediate Next Action
 
 **Right now, you should:**
-
-1. **Update your Supabase schema** (copy the SQL from section 2 above)
 2. **Create `.env` files** in both projects with your credentials
 3. **Test the current flow:**
    - Run backend: `cd backend && npm run dev`
@@ -220,6 +194,4 @@ SELECT * FROM session_participants;
 - Start with 2 players, then scale to 4
 
 ---
-
-**Let's build Aux Wars! 🎵**
 
