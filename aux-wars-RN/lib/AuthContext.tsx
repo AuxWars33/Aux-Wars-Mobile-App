@@ -12,6 +12,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   isSpotifyConnected: boolean;
   connectSpotify: () => Promise<void>;
+  disconnectSpotify: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -119,6 +120,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const disconnectSpotify = async () => {
+    try {
+      await SpotifyService.logout();
+      setIsSpotifyConnected(false);
+    } catch (error: any) {
+      console.error('Spotify disconnect error:', error);
+      throw error;
+    }
+  };
+
   const value = {
     session,
     user,
@@ -128,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     isSpotifyConnected,
     connectSpotify,
+    disconnectSpotify,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

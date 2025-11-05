@@ -113,12 +113,13 @@ Your Supabase database has these tables (already set up):
 
 You need to add these columns to `sessions`:
 ```sql
+-- Note: PostgreSQL column names should be lowercase
 ALTER TABLE sessions 
-ADD COLUMN IF NOT EXISTS artistId TEXT,
-ADD COLUMN IF NOT EXISTS artistName TEXT,
-ADD COLUMN IF NOT EXISTS artistImageUrl TEXT,
-ADD COLUMN IF NOT EXISTS deckSize INTEGER DEFAULT 5,
-ADD COLUMN IF NOT EXISTS currentRound INTEGER DEFAULT 0;
+ADD COLUMN IF NOT EXISTS artistid TEXT,
+ADD COLUMN IF NOT EXISTS artistname TEXT,
+ADD COLUMN IF NOT EXISTS artistimageurl TEXT,
+ADD COLUMN IF NOT EXISTS decksize INTEGER DEFAULT 5,
+ADD COLUMN IF NOT EXISTS currentround INTEGER DEFAULT 0;
 ```
 
 And create this new table:

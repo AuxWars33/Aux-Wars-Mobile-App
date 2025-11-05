@@ -16,7 +16,7 @@ import { useAuth } from '../../lib/AuthContext';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user, signOut, isSpotifyConnected, connectSpotify } = useAuth();
+  const { user, signOut, isSpotifyConnected, connectSpotify, disconnectSpotify } = useAuth();
   const [testing, setTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connected' | 'error'>('idle');
 
@@ -167,11 +167,42 @@ export default function HomeScreen() {
           <Text style={styles.balanceAmount}>No Active Session</Text>
           
           {/* Spotify Connection Status */}
-          {!isSpotifyConnected && (
+          {!isSpotifyConnected ? (
             <TouchableOpacity style={styles.spotifyBanner} onPress={handleConnectSpotify}>
               <Ionicons name="musical-notes" size={20} color="#1DB954" />
               <Text style={styles.spotifyBannerText}>Connect Spotify to play</Text>
             </TouchableOpacity>
+          ) : (
+            <View style={styles.spotifyConnectedBanner}>
+              <Ionicons name="checkmark-circle" size={20} color="#1DB954" />
+              <Text style={styles.spotifyConnectedText}>Spotify Connected</Text>
+              <TouchableOpacity 
+                style={styles.disconnectButton}
+                onPress={async () => {
+                  Alert.alert(
+                    'Disconnect Spotify',
+                    'Are you sure you want to disconnect your Spotify account?',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Disconnect',
+                        style: 'destructive',
+                        onPress: async () => {
+                          try {
+                            await disconnectSpotify();
+                            Alert.alert('Success', 'Spotify account disconnected');
+                          } catch (error) {
+                            Alert.alert('Error', 'Failed to disconnect Spotify');
+                          }
+                        },
+                      },
+                    ]
+                  );
+                }}
+              >
+                <Text style={styles.disconnectButtonText}>Disconnect</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {/* Action Buttons */}
@@ -380,6 +411,36 @@ const styles = StyleSheet.create({
   },
   spotifyBannerText: {
     fontSize: 14,
+    fontWeight: '600',
+    color: '#1DB954',
+  },
+  spotifyConnectedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#E7F5EC',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  spotifyConnectedText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1DB954',
+    marginLeft: 8,
+  },
+  disconnectButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#1DB954',
+  },
+  disconnectButtonText: {
+    fontSize: 12,
     fontWeight: '600',
     color: '#1DB954',
   },

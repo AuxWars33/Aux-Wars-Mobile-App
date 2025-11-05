@@ -41,13 +41,13 @@ This guide provides step-by-step instructions to complete the core features of A
 
 2. **Database Schema Update**
    ```sql
-   -- Add these fields to sessions table:
+   -- Add these fields to sessions table (lowercase for PostgreSQL):
    ALTER TABLE sessions 
-   ADD COLUMN artistId TEXT,
-   ADD COLUMN artistName TEXT,
-   ADD COLUMN artistImageUrl TEXT,
-   ADD COLUMN deckSize INTEGER DEFAULT 5,
-   ADD COLUMN currentRound INTEGER DEFAULT 0;
+   ADD COLUMN artistid TEXT,
+   ADD COLUMN artistname TEXT,
+   ADD COLUMN artistimageurl TEXT,
+   ADD COLUMN decksize INTEGER DEFAULT 5,
+   ADD COLUMN currentround INTEGER DEFAULT 0;
 
    -- Create player_decks table:
    CREATE TABLE player_decks (

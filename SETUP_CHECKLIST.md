@@ -23,13 +23,13 @@ Use this checklist to get your development environment ready.
 
 - [ ] Update Supabase schema with new fields:
   ```sql
-  -- Add to sessions table
+  -- Add to sessions table (lowercase for PostgreSQL)
   ALTER TABLE sessions 
-  ADD COLUMN IF NOT EXISTS artistId TEXT,
-  ADD COLUMN IF NOT EXISTS artistName TEXT,
-  ADD COLUMN IF NOT EXISTS artistImageUrl TEXT,
-  ADD COLUMN IF NOT EXISTS deckSize INTEGER DEFAULT 5,
-  ADD COLUMN IF NOT EXISTS currentRound INTEGER DEFAULT 0;
+  ADD COLUMN IF NOT EXISTS artistid TEXT,
+  ADD COLUMN IF NOT EXISTS artistname TEXT,
+  ADD COLUMN IF NOT EXISTS artistimageurl TEXT,
+  ADD COLUMN IF NOT EXISTS decksize INTEGER DEFAULT 5,
+  ADD COLUMN IF NOT EXISTS currentround INTEGER DEFAULT 0;
   ```
 
 - [ ] Create player_decks table:

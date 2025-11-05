@@ -55,6 +55,8 @@ Before you begin, ensure you have the following installed:
 - **Xcode** (for iOS development) - Available from the Mac App Store
 - **CocoaPods** - Install via `sudo gem install cocoapods`
 - **Expo CLI** - Will be installed with project dependencies
+- **iOS Simulator** (via Xcode) or a physical iOS device
+- **Android Studio** (optional, for Android development)
 
 ### 1️⃣ Navigate to the React Native project
 
@@ -128,69 +130,65 @@ npm run ios
 
 This command will automatically run prebuild if the ios folder doesn't exist.
 
-### 🔧 Troubleshooting iOS Setup
+### 🔧 Troubleshooting
 
-**Issue: iOS Assets folder disappears after prebuild**
+#### Common Setup Issues
 
-When you run `npx expo prebuild`, it regenerates the entire ios folder from scratch, which removes custom assets like `beanie_loading.riv`. You must copy them back after each prebuild:
+**❌ "No Podfile found in the project directory"**
+
+The native iOS folder hasn't been generated yet:
 ```bash
-mkdir -p ios/Assets
-cp assets/images/beanie_loading.riv ios/Assets/
-```
-
-💡 **Tip:** Create a setup script to automate this (see "Quick Setup Script" below).
-
-**Issue: "No Podfile found in the project directory"**
-
-This means the native ios folder hasn't been generated yet. Run:
-```bash
-npx expo prebuild
+cd aux-wars-RN
+npx expo prebuild --platform ios
 cd ios && pod install && cd ..
 ```
 
-**Issue: "The ios project is malformed" when running prebuild**
 
-This is normal! Answer **Y (yes)** when prompted. Expo will clean and regenerate the native folders. Don't forget to copy custom assets afterwards:
-```bash
-npx expo prebuild --clean
-mkdir -p ios/Assets
-cp assets/images/beanie_loading.riv ios/Assets/
-cd ios && pod install && cd ..
-```
 
-**Issue: CocoaPods installation fails**
-```bash
-sudo gem install cocoapods
-cd ios && pod install --repo-update && cd ..
-```
 
-**Issue: iOS Simulator not launching**
+**❌ iOS Simulator not launching**
 ```bash
 # Open Xcode and launch simulator manually
 open -a Simulator
 ```
 
-**Issue: Build fails with missing dependencies**
+**❌ Build fails with missing dependencies**
 ```bash
 # Clean and reinstall everything
+cd aux-wars-RN
 rm -rf ios android node_modules
 npm install
 npx expo prebuild
-mkdir -p ios/Assets
-cp assets/images/beanie_loading.riv ios/Assets/
+Create Assets group in Xcode
 cd ios && pod install && cd ..
 ```
 
-**Issue: Metro bundler port conflict**
+#### Runtime Issues
+
+**❌ "Cannot connect to backend" or "Network Error"**
+
+Make sure the backend server is running:
 ```bash
-# Kill process on port 8081
-lsof -ti:8081 | xargs kill -9
-npx expo start --clear
+# In a separate terminal
+cd backend
+npm run dev
 ```
 
+Check that `EXPO_PUBLIC_BACKEND_URL` in `.env` is correct (should be `http://localhost:3000`)
 
+**❌ "Spotify authentication failed"**
 
+1. Verify your Spotify Client ID is correct in `.env`
+2. Check that redirect URI is `auxwarsrn://spotify-callback` in both:
+   - Your `.env` file
+   - Spotify Developer Dashboard settings
+3. Make sure backend has the Spotify Client Secret in `backend/.env`
 
+**❌ "Cannot create session" or database errors**
+
+1. Check that Supabase is accessible
+2. Verify `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` are correct
+3. Make sure the backend server is running with the correct `DATABASE_URL` in `backend/.env`
 
 
 ### 📱 Available Commands (aux-wars-RN)
@@ -201,32 +199,6 @@ npm run ios        # Run on iOS simulator
 npm run android    # Run on Android emulator
 npm run web        # Run in web browser
 npx expo start -c  # Start with cleared cache
-```
-
-### 🚀 Quick Setup Script (Recommended)
-
-To make setup easier, especially after running `prebuild`, you can create a helper script:
-
-**Create `setup-ios.sh` in the `aux-wars-RN` folder:**
-```bash
-#!/bin/bash
-echo "🔨 Running expo prebuild..."
-npx expo prebuild --clean
-
-echo "📁 Copying custom assets..."
-mkdir -p ios/Assets
-cp assets/images/beanie_loading.riv ios/Assets/
-
-echo "📦 Installing CocoaPods dependencies..."
-cd ios && pod install && cd ..
-
-echo "✅ iOS setup complete! Run 'npm run ios' to start."
-```
-
-**Make it executable and run it:**
-```bash
-chmod +x setup-ios.sh
-./setup-ios.sh
 ```
 
 ---
@@ -259,44 +231,196 @@ The web app will be available at `http://localhost:5173`
 
 ## ⚙️ Environment Setup
 
-### Backend Connection
+### 1. Backend Setup
 
-You'll need a running backend (see [Aux-Wars-Backend](https://github.com/AuxWars33/Aux-Wars-Backend) or the `backend/` folder in this repository).
+First, set up the backend server (see the `backend/` folder in this repository).
 
-### Supabase Configuration
-
-Both the React Native and web apps use Supabase for authentication. Create a `.env` file in the respective project directories:
-
-**For aux-wars-RN/.env:**
+**Create `backend/.env`:**
+```bash
+PORT=3000
+DATABASE_URL=your_supabase_connection_string
+SPOTIFY_CLIENT_ID=your_spotify_client_id
+SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 ```
-EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+
+**Install backend dependencies and start:**
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+The backend server will run on `http://localhost:3000`
+
+### 2. Supabase Configuration
+
+Both the React Native and web apps use Supabase for authentication and database.
+
+#### Get Supabase Credentials:
+1. Go to your [Supabase Dashboard](https://supabase.com/dashboard)
+2. Select your project
+3. Go to **Settings** → **API**
+4. Copy the **Project URL** and **anon/public key**
+5. For the database URL, go to **Settings** → **Database** → **Connection String** (use the URI format)
+
+### 3. Spotify API Setup
+
+The app uses Spotify OAuth for music integration.
+
+#### Register Your App:
+1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Click **Create App**
+3. Fill in the details:
+   - **App Name:** Aux Wars (or your choice)
+   - **App Description:** Music battle app
+   - **Redirect URI:** `auxwarsrn://spotify-callback`
+4. Click **Save**
+5. Copy your **Client ID** and **Client Secret**
+
+### 4. Environment Files
+
+**Create `aux-wars-RN/.env`:**
+```bash
+# Supabase Configuration
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Spotify Configuration
+EXPO_PUBLIC_SPOTIFY_CLIENT_ID=your_spotify_client_id
+EXPO_PUBLIC_SPOTIFY_REDIRECT_URI=auxwarsrn://spotify-callback
+
+# Backend URL
+EXPO_PUBLIC_BACKEND_URL=http://localhost:3000
 ```
 
-**For aux-wars/.env:**
-```
-VITE_SUPABASE_URL=your_supabase_url
+**Create `aux-wars/.env` (for web app):**
+```bash
+VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-### Spotify API (Coming Soon)
 
-When Spotify OAuth integration is added, the following environment variables will be required:
+## 🚀 Running the Complete App
 
+### Start Development Environment
+
+You need to run both the **backend** and **React Native app** simultaneously.
+
+#### Terminal 1 - Backend Server:
+```bash
+cd backend
+npm run dev
 ```
-SPOTIFY_CLIENT_ID=
-SPOTIFY_CLIENT_SECRET=
-SPOTIFY_REDIRECT_URI=
+You should see: `Server running on port 3000`
+
+#### Terminal 2 - React Native App:
+```bash
+cd aux-wars-RN
+npx expo start
+```
+
+#### Terminal 3 - iOS Simulator (Optional Method):
+```bash
+# Or press 'i' in the Expo CLI to launch iOS simulator
+cd aux-wars-RN
+npm run ios
+```
+
+### 📱 Testing the App
+
+Once both servers are running, test the complete flow:
+
+#### 1. **Authentication**
+   - Open the app (should show login screen)
+   - Click **"Sign Up"**
+   - Create an account with email, password, and username
+   - Login with your credentials
+
+#### 2. **Connect Spotify**
+   - On the home screen, you'll see a banner to connect Spotify
+   - Click **"Connect Spotify"**
+   - Authorize the app in your browser
+   - Return to the app (should show "Connected to Spotify")
+
+#### 3. **Create a Session**
+   - Click **"Create Session"**
+   - Search for an artist (e.g., "Drake", "Taylor Swift")
+   - Select an artist from the results
+   - Choose deck size (3-10 songs)
+   - Click **"Create Session"**
+   - Note the 6-character session code
+
+#### 4. **Join a Session** (Use another device/simulator)
+   - Open the app on a second device
+   - Sign up/login with a different account
+   - Connect Spotify
+   - Click **"Join Session"**
+   - Enter the session code from step 3
+   - Click **"Join"**
+
+**If you encounter issues:**
+```bash
+# Clear Expo cache
+npx expo start --clear
+
+# Reset Metro bundler
+npx expo start --reset-cache
+
+# Restart iOS simulator
+# Press 'Shift + Command + K' in Simulator to reset
 ```
 
 ---
 
-## 🎯 Next Steps
+## 🎯 Current Features (Implemented)
 
-- [ ] Complete Spotify API integration
-- [ ] Implement full voting and scoring system
-- [ ] Add profile customization
-- [ ] Build results/leaderboard screen
-- [ ] Add sound effects and animations
-- [ ] Prepare for App Store/Play Store deployment
+✅ **Authentication System**
+- Email/password signup and login
+- Session persistence
+- Protected routes
+- Sign out functionality
+
+✅ **Spotify Integration**
+- OAuth 2.0 authentication
+- Artist search
+- Top tracks retrieval
+- Token management and refresh
+
+✅ **Session Management**
+- Create sessions with artist themes
+- Generate unique 6-character codes
+- Join sessions via code
+- Configurable deck sizes (3-10 songs)
+- Participant tracking
+
+---
+
+## 🚧 Next Steps (In Development)
+
+- [ ] **Deck Builder Screen** - Select songs from artist's top tracks
+- [ ] **Lobby Screen** - See participants and start game
+- [ ] **Round Playback** - Play each player's song (30s clips)
+- [ ] **Voting System** - Vote for favorite tracks
+- [ ] **Results & Leaderboard** - Display winners and scores
+- [ ] **Real-time Sync** - Socket.IO for synchronized gameplay
+- [ ] **Sound Effects & Animations** - Polish the user experience
+- [ ] **App Store Deployment** - Prepare for production
+
+---
+
+## 📊 Project Status
+
+**Current Progress: ~30% Complete**
+
+| Feature | Status |
+|---------|--------|
+| Authentication | ✅ Complete |
+| Spotify Integration | ✅ Complete |
+| Session Create/Join | ✅ Complete |
+| Deck Builder | 📋 To Do |
+| Lobby | 📋 To Do |
+| Gameplay | 📋 To Do |
+| Voting | 📋 To Do |
+| Results | 📋 To Do |
+
 

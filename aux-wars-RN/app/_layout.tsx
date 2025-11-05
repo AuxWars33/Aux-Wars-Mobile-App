@@ -65,6 +65,7 @@ export default function RootLayout() {
           <Stack.Screen name="auth/signup" options={{ headerShown: false }} />
           <Stack.Screen name="session/create" options={{ headerShown: false }} />
           <Stack.Screen name="session/join" options={{ headerShown: false }} />
+          <Stack.Screen name="session/lobby" options={{ headerShown: false }} />
           <Stack.Screen name="spotify-callback" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           <Stack.Screen name="screens/LoadingScreen" options={{ headerShown: false }} />

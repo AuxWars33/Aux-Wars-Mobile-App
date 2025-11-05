@@ -67,8 +67,7 @@ export default function JoinSessionScreen() {
           {
             text: 'OK',
             onPress: () => {
-              // TODO: Navigate to lobby screen
-              router.push('/(tabs)');
+              router.push(`/session/lobby?sessionId=${session.id}` as any);
             },
           },
         ]);
@@ -98,13 +97,12 @@ export default function JoinSessionScreen() {
 
       Alert.alert(
         'Success!',
-        `Joined "${session.name}"!\nPrepare to battle with ${session.artistName} songs!`,
+        `Joined "${session.name}"!\nPrepare to battle with ${session.artistname} songs!`,
         [
           {
             text: 'OK',
             onPress: () => {
-              // TODO: Navigate to lobby screen
-              router.push('/(tabs)');
+              router.push(`/session/lobby?sessionId=${session.id}` as any);
             },
           },
         ]

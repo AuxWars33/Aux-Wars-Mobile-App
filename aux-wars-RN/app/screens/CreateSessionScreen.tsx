@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -19,7 +19,7 @@ import { useAuth } from '../../lib/AuthContext';
 
 export default function CreateSessionScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isSpotifyConnected, connectSpotify } = useAuth();
   
   const [sessionName, setSessionName] = useState('');
   const [artistSearch, setArtistSearch] = useState('');
@@ -29,15 +29,65 @@ export default function CreateSessionScreen() {
   const [searching, setSearching] = useState(false);
   const [creating, setCreating] = useState(false);
 
+  // Check Spotify connection on mount
+  useEffect(() => {
+    if (!isSpotifyConnected) {
+      Alert.alert(
+        'Spotify Required',
+        'You need to connect your Spotify account to search for artists.',
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
+          { text: 'Connect Spotify', onPress: handleConnectSpotify },
+        ]
+      );
+    }
+  }, []);
+
+  const handleConnectSpotify = async () => {
+    try {
+      await connectSpotify();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to connect to Spotify. Please try again.');
+      router.back();
+    }
+  };
+
   const handleSearchArtist = async () => {
     if (!artistSearch.trim()) return;
+
+    // Check if Spotify is connected before searching
+    if (!isSpotifyConnected) {
+      Alert.alert(
+        'Spotify Required',
+        'Please connect your Spotify account first.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Connect Now', onPress: handleConnectSpotify },
+        ]
+      );
+      return;
+    }
 
     setSearching(true);
     try {
       const results = await SpotifyService.searchArtists(artistSearch);
       setSearchResults(results);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to search artists. Please try again.');
+    } catch (error: any) {
+      console.error('Artist search error:', error);
+      
+      // Check if it's an authentication error
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        Alert.alert(
+          'Spotify Authentication Failed',
+          'Your Spotify session has expired. Please reconnect.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Reconnect', onPress: handleConnectSpotify },
+          ]
+        );
+      } else {
+        Alert.alert('Error', 'Failed to search artists. Please try again.');
+      }
     } finally {
       setSearching(false);
     }
@@ -88,11 +138,11 @@ export default function CreateSessionScreen() {
           maxPlayers: 8,
           roundDuration: 30,
           status: 'waiting',
-          artistId: selectedArtist.id,
-          artistName: selectedArtist.name,
-          artistImageUrl: selectedArtist.images[0]?.url || '',
-          deckSize: deckSize,
-          currentRound: 0,
+          artistid: selectedArtist.id,
+          artistname: selectedArtist.name,
+          artistimageurl: selectedArtist.images[0]?.url || '',
+          decksize: deckSize,
+          currentround: 0,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         })
@@ -121,8 +171,7 @@ export default function CreateSessionScreen() {
           {
             text: 'OK',
             onPress: () => {
-              // TODO: Navigate to lobby screen
-              router.push(`/(tabs)`);
+              router.push(`/session/lobby?sessionId=${session.id}` as any);
             },
           },
         ]
@@ -168,6 +217,19 @@ export default function CreateSessionScreen() {
           <Text style={styles.title}>Create Session</Text>
           <View style={styles.placeholder} />
         </View>
+
+        {/* Spotify Connection Banner */}
+        {!isSpotifyConnected && (
+          <View style={styles.spotifyBanner}>
+            <Ionicons name="alert-circle" size={20} color="#FF9800" />
+            <Text style={styles.spotifyBannerText}>
+              Spotify not connected. Artist search will not work.
+            </Text>
+            <TouchableOpacity onPress={handleConnectSpotify}>
+              <Text style={styles.spotifyBannerLink}>Connect</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Session Name */}
         <View style={styles.section}>
@@ -312,6 +374,31 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     width: 40,
+  },
+  spotifyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9800',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: 24,
+    marginBottom: 20,
+    borderRadius: 8,
+    gap: 8,
+  },
+  spotifyBannerText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#E65100',
+    fontWeight: '500',
+  },
+  spotifyBannerLink: {
+    fontSize: 13,
+    color: '#FF9800',
+    fontWeight: 'bold',
+    textDecorationLine: 'underline',
   },
   section: {
     paddingHorizontal: 24,

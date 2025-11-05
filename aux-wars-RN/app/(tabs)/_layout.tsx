@@ -32,7 +32,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="session"
         options={{
-          title: 'Session',
+          title: 'Lobby',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="headphones" color={color} />,
         }}
       />
