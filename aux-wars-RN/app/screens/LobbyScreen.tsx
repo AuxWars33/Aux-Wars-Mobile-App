@@ -31,6 +31,14 @@ interface Participant {
   };
 }
 
+interface PlayerDeck {
+  id: string;
+  sessionId: string;
+  userId: string;
+  songs: any[];
+  isSubmitted: boolean;
+}
+
 interface Session {
   id: string;
   name: string;
@@ -55,10 +63,15 @@ export default function LobbyScreen() {
 
   const [session, setSession] = useState<Session | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [playerDecks, setPlayerDecks] = useState<PlayerDeck[]>([]);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
 
   const isHost = session?.hostId === user?.id;
+  const isSessionActive = session?.status === 'active';
+  const currentUserDeck = playerDecks.find(deck => deck.userId === user?.id);
+  const allDecksSubmitted = participants.length > 0 && 
+    participants.every(p => playerDecks.some(d => d.userId === p.userId && d.isSubmitted));
 
   useEffect(() => {
     if (!sessionId) {
@@ -75,6 +88,17 @@ export default function LobbyScreen() {
       supabase.channel('lobby').unsubscribe();
     };
   }, [sessionId]);
+
+  // Auto-navigate when session becomes active
+  useEffect(() => {
+    if (isSessionActive && !loading) {
+      console.log('Session is active, navigating to round screen...');
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        router.push(`/session/round?sessionId=${sessionId}`);
+      }, 100);
+    }
+  }, [isSessionActive, loading]);
 
   const fetchSessionData = async () => {
     try {
@@ -104,6 +128,18 @@ export default function LobbyScreen() {
 
       if (participantsError) throw participantsError;
       setParticipants(participantsData || []);
+
+      // Fetch player decks
+      const { data: decksData, error: decksError } = await supabase
+        .from('player_decks')
+        .select('*')
+        .eq('sessionId', sessionId);
+
+      if (decksError && decksError.code !== 'PGRST116') {
+        console.error('Error fetching decks:', decksError);
+      } else {
+        setPlayerDecks(decksData || []);
+      }
     } catch (error) {
       console.error('Error fetching session data:', error);
       Alert.alert('Error', 'Failed to load session. Please try again.');
@@ -128,20 +164,11 @@ export default function LobbyScreen() {
         (payload) => {
           console.log('Session updated:', payload);
           if (payload.eventType === 'UPDATE') {
-            setSession(payload.new as Session);
+            const newSession = payload.new as Session;
+            console.log('New session state:', newSession.status);
+            setSession(newSession);
             
-            // If session started, navigate to game screen
-            if (payload.new.status === 'active') {
-              Alert.alert('Game Starting!', 'Get ready to battle!', [
-                {
-                  text: 'OK',
-                  onPress: () => {
-                    // TODO: Navigate to game screen
-                    console.log('Navigate to game screen');
-                  },
-                },
-              ]);
-            }
+            // The useEffect will handle navigation when isSessionActive changes
           } else if (payload.eventType === 'DELETE') {
             Alert.alert('Session Ended', 'The host has cancelled the session.', [
               { text: 'OK', onPress: () => router.push('/(tabs)') },
@@ -160,6 +187,20 @@ export default function LobbyScreen() {
         (payload) => {
           console.log('Participants updated:', payload);
           // Refresh participants list
+          fetchSessionData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'player_decks',
+          filter: `sessionId=eq.${sessionId}`,
+        },
+        (payload) => {
+          console.log('Player decks updated:', payload);
+          // Refresh decks
           fetchSessionData();
         }
       )
@@ -192,8 +233,20 @@ export default function LobbyScreen() {
     }
   };
 
+  const handleBuildDeck = () => {
+    router.push(`/session/deck-builder?sessionId=${sessionId}`);
+  };
+
   const handleStartSession = async () => {
     if (!isHost || !session) return;
+
+    if (!allDecksSubmitted) {
+      Alert.alert(
+        'Cannot Start',
+        'All players must submit their decks before starting the game.'
+      );
+      return;
+    }
 
     Alert.alert(
       'Start Session?',
@@ -205,21 +258,34 @@ export default function LobbyScreen() {
           onPress: async () => {
             setStarting(true);
             try {
+              console.log('Attempting to start session:', sessionId);
+              
               // Update session status to active
-              const { error } = await supabase
+              const { data, error } = await supabase
                 .from('sessions')
                 .update({ 
                   status: 'active',
                   updatedAt: new Date().toISOString(),
                 })
-                .eq('id', sessionId);
+                .eq('id', sessionId)
+                .select();
 
-              if (error) throw error;
+              if (error) {
+                console.error('Supabase update error:', error);
+                throw error;
+              }
 
-              // The realtime subscription will handle navigation
-            } catch (error) {
+              console.log('Session update response:', data);
+              console.log('Session started successfully, navigating to round screen...');
+              
+              // Navigate immediately (don't wait for realtime)
+              router.push(`/session/round?sessionId=${sessionId}`);
+            } catch (error: any) {
               console.error('Error starting session:', error);
-              Alert.alert('Error', 'Failed to start session. Please try again.');
+              Alert.alert(
+                'Error', 
+                `Failed to start session: ${error.message || 'Unknown error'}`
+              );
               setStarting(false);
             }
           },
@@ -281,6 +347,10 @@ export default function LobbyScreen() {
       return participant.user.email.split('@')[0];
     }
     return 'Player';
+  };
+
+  const isDeckSubmitted = (userId: string) => {
+    return playerDecks.some(deck => deck.userId === userId && deck.isSubmitted);
   };
 
   if (loading) {
@@ -362,6 +432,24 @@ export default function LobbyScreen() {
           </View>
         </View>
 
+        {/* Build Deck Button */}
+        {!currentUserDeck?.isSubmitted && (
+          <TouchableOpacity style={styles.buildDeckCard} onPress={handleBuildDeck}>
+            <View style={styles.buildDeckIcon}>
+              <Ionicons name="albums-outline" size={32} color="#8B4049" />
+            </View>
+            <View style={styles.buildDeckInfo}>
+              <Text style={styles.buildDeckTitle}>
+                {currentUserDeck ? 'Continue Building Deck' : 'Build Your Deck'}
+              </Text>
+              <Text style={styles.buildDeckSubtitle}>
+                Select {session?.decksize} songs from {session?.artistname}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#8B4049" />
+          </TouchableOpacity>
+        )}
+
         {/* Participants List */}
         <View style={styles.participantsCard}>
           <View style={styles.participantsHeader}>
@@ -388,12 +476,27 @@ export default function LobbyScreen() {
                   <Text style={styles.participantName}>
                     {getDisplayName(participant)}
                   </Text>
-                  {participant.isHost && (
-                    <View style={styles.hostBadge}>
-                      <Ionicons name="star" size={12} color="#FFB800" />
-                      <Text style={styles.hostBadgeText}>Host</Text>
-                    </View>
-                  )}
+                  <View style={styles.participantBadges}>
+                    {participant.isHost && (
+                      <View style={styles.hostBadge}>
+                        <Ionicons name="star" size={12} color="#FFB800" />
+                        <Text style={styles.hostBadgeText}>Host</Text>
+                      </View>
+                    )}
+                    {isDeckSubmitted(participant.userId) ? (
+                      <View style={styles.deckStatusBadge}>
+                        <Ionicons name="checkmark-circle" size={12} color="#4CAF50" />
+                        <Text style={styles.deckStatusText}>Deck Ready</Text>
+                      </View>
+                    ) : (
+                      <View style={[styles.deckStatusBadge, styles.deckStatusBadgePending]}>
+                        <Ionicons name="time-outline" size={12} color="#FF9800" />
+                        <Text style={[styles.deckStatusText, styles.deckStatusTextPending]}>
+                          Building...
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               </View>
               {participant.userId === user?.id && (
@@ -418,11 +521,38 @@ export default function LobbyScreen() {
         </View>
 
         {/* Waiting Message for Non-Host */}
-        {!isHost && (
+        {!isHost && currentUserDeck?.isSubmitted && !isSessionActive && (
           <View style={styles.waitingCard}>
             <Ionicons name="time-outline" size={24} color="#8B4049" />
             <Text style={styles.waitingText}>
               Waiting for host to start the game...
+            </Text>
+          </View>
+        )}
+
+        {/* Game Started - Join Button for Non-Host */}
+        {!isHost && isSessionActive && (
+          <View style={styles.gameStartedCard}>
+            <Ionicons name="play-circle" size={24} color="#4CAF50" />
+            <Text style={styles.gameStartedText}>
+              Game has started!
+            </Text>
+            <TouchableOpacity
+              style={styles.joinGameButton}
+              onPress={() => router.push(`/session/round?sessionId=${sessionId}`)}
+            >
+              <Text style={styles.joinGameButtonText}>Join Now</Text>
+              <Ionicons name="arrow-forward" size={20} color="#FFFBF5" />
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        {/* Host Warning if Decks Not Ready */}
+        {isHost && !allDecksSubmitted && (
+          <View style={styles.warningCard}>
+            <Ionicons name="alert-circle-outline" size={24} color="#FF9800" />
+            <Text style={styles.warningText}>
+              Waiting for all players to submit their decks
             </Text>
           </View>
         )}
@@ -436,10 +566,10 @@ export default function LobbyScreen() {
           <TouchableOpacity
             style={[
               styles.startButton,
-              starting && styles.startButtonDisabled,
+              (!allDecksSubmitted || starting) && styles.startButtonDisabled,
             ]}
             onPress={handleStartSession}
-            disabled={starting}
+            disabled={!allDecksSubmitted || starting}
           >
             {starting ? (
               <ActivityIndicator color="#FFFBF5" />
@@ -450,6 +580,11 @@ export default function LobbyScreen() {
               </>
             )}
           </TouchableOpacity>
+          {!allDecksSubmitted && (
+            <Text style={styles.startHint}>
+              All players must submit their decks first
+            </Text>
+          )}
         </View>
       )}
     </View>
@@ -685,7 +820,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#2D1B2E',
-    marginBottom: 2,
+    marginBottom: 4,
+  },
+  participantBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   hostBadge: {
     flexDirection: 'row',
@@ -696,6 +836,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#FFB800',
+  },
+  deckStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  deckStatusBadgePending: {
+    opacity: 0.7,
+  },
+  deckStatusText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#4CAF50',
+  },
+  deckStatusTextPending: {
+    color: '#FF9800',
   },
   youBadge: {
     backgroundColor: '#8B4049',
@@ -734,6 +890,38 @@ const styles = StyleSheet.create({
     color: '#999',
     fontStyle: 'italic',
   },
+  buildDeckCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E7F5EC',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#8B4049',
+  },
+  buildDeckIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FFFBF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  buildDeckInfo: {
+    flex: 1,
+  },
+  buildDeckTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2D1B2E',
+    marginBottom: 4,
+  },
+  buildDeckSubtitle: {
+    fontSize: 13,
+    color: '#666',
+  },
   waitingCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -747,6 +935,50 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#8B4049',
+  },
+  gameStartedCard: {
+    backgroundColor: '#E7F5EC',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+  },
+  gameStartedText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2D1B2E',
+  },
+  joinGameButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8B4049',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    gap: 8,
+    marginTop: 8,
+  },
+  joinGameButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFBF5',
+  },
+  warningCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF3E0',
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
+    marginBottom: 16,
+  },
+  warningText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FF9800',
   },
   bottomContainer: {
     padding: 24,
