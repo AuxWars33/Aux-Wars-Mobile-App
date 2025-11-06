@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -67,6 +67,9 @@ export default function LobbyScreen() {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
 
+  const initialStatusRef = useRef<string | null>(null);
+  const hasNavigatedRef = useRef(false);
+
   const isHost = session?.hostId === user?.id;
   const isSessionActive = session?.status === 'active';
   const currentUserDeck = playerDecks.find(deck => deck.userId === user?.id);
@@ -89,14 +92,26 @@ export default function LobbyScreen() {
     };
   }, [sessionId]);
 
-  // Auto-navigate when session becomes active
+  // Store initial status when first loaded
   useEffect(() => {
-    if (isSessionActive && !loading) {
-      console.log('Session is active, navigating to round screen...');
-      // Small delay to ensure state is updated
-      setTimeout(() => {
-        router.push(`/session/round?sessionId=${sessionId}`);
-      }, 100);
+    if (session && initialStatusRef.current === null) {
+      initialStatusRef.current = session.status;
+      console.log('Initial session status:', session.status);
+    }
+  }, [session]);
+
+  // Auto-navigate when session becomes active (only if it changed from non-active)
+  useEffect(() => {
+    if (isSessionActive && !loading && !hasNavigatedRef.current) {
+      // Only navigate if session was initially not active
+      if (initialStatusRef.current && initialStatusRef.current !== 'active') {
+        console.log('Session changed to active, navigating to round screen...');
+        hasNavigatedRef.current = true;
+        // Small delay to ensure state is updated
+        setTimeout(() => {
+          router.push(`/session/round?sessionId=${sessionId}`);
+        }, 100);
+      }
     }
   }, [isSessionActive, loading]);
 
